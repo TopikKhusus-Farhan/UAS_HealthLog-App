@@ -7,6 +7,7 @@ router.post('/makanan', verifikasiToken, dailyLogController.tambahMakanan);
 router.post('/olahraga', verifikasiToken, dailyLogController.tambahOlahraga);
 router.delete('/makanan/:tanggal/:id_item', verifikasiToken, dailyLogController.hapusMakanan);
 router.get('/riwayat/semua', verifikasiToken, dailyLogController.getSemuaRiwayat);
+router.post('/catatan', verifikasiToken, dailyLogController.catatTidurMinum);
 
 router.get('/:tanggal', verifikasiToken, dailyLogController.getLogHarian);
 

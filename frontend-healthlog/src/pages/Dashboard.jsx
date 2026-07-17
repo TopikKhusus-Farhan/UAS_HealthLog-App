@@ -9,7 +9,8 @@ export default function Dashboard() {
   const [showMakananModal, setShowMakananModal] = useState(false);
   const [showOlahragaModal, setShowOlahragaModal] = useState(false);
 
-  const [formMakanan, setFormMakanan] = useState({ nama: '', kalori: '' });
+  // PERBAIKAN: Menambahkan state 'waktu' dengan default 'Makan Siang'
+  const [formMakanan, setFormMakanan] = useState({ waktu: 'Makan Siang', nama: '', kalori: '' });
   const [formOlahraga, setFormOlahraga] = useState({ jenis: '', durasi: '', kalori: '' });
   const [formCatatan, setFormCatatan] = useState({ tidur: '', air: '' });
 
@@ -17,9 +18,11 @@ export default function Dashboard() {
     try {
       const token = localStorage.getItem('token');
       const hariIni = new Date().toISOString().split('T')[0]; 
+      
       const response = await axios.get(`http://localhost:3000/api/log/${hariIni}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
       const data = response.data.data;
       setLogHarian(data);
       setFormCatatan({
@@ -27,7 +30,7 @@ export default function Dashboard() {
         air: data?.total_minum_gelas || ''
       });
     } catch (error) {
-      console.error("Belum ada data hari ini");
+      console.error("Belum ada data hari ini atau terjadi kesalahan server.");
     }
   };
 
@@ -69,14 +72,24 @@ export default function Dashboard() {
     try {
       const token = localStorage.getItem('token');
       const hariIni = new Date().toISOString().split('T')[0];
+      
+      // PERBAIKAN: Mengirim formMakanan.waktu sesuai pilihan dropdown
       await axios.post('http://localhost:3000/api/log/makanan', {
-        tanggal: hariIni, waktu: 'Makan', nama_makanan: formMakanan.nama, kalori: Number(formMakanan.kalori)
-      }, { headers: { Authorization: `Bearer ${token}` } });
+        tanggal: hariIni, 
+        waktu: formMakanan.waktu, 
+        nama_makanan: formMakanan.nama, 
+        kalori: Number(formMakanan.kalori)
+      }, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
 
       setShowMakananModal(false);
-      setFormMakanan({ nama: '', kalori: '' });
+      setFormMakanan({ waktu: 'Makan Siang', nama: '', kalori: '' });
       fetchDashboardData();
-    } catch (error) { alert("Gagal mencatat makanan."); }
+    } catch (error) { 
+      const pesanError = error.response?.data?.pesan || "Gagal mencatat makanan.";
+      alert(pesanError); 
+    }
   };
 
   const submitOlahraga = async (e) => {
@@ -84,14 +97,23 @@ export default function Dashboard() {
     try {
       const token = localStorage.getItem('token');
       const hariIni = new Date().toISOString().split('T')[0];
+      
       await axios.post('http://localhost:3000/api/log/olahraga', {
-        tanggal: hariIni, jenis: formOlahraga.jenis, durasi_menit: Number(formOlahraga.durasi), kalori_terbakar: Number(formOlahraga.kalori)
-      }, { headers: { Authorization: `Bearer ${token}` } });
+        tanggal: hariIni, 
+        jenis: formOlahraga.jenis, 
+        durasi_menit: Number(formOlahraga.durasi), 
+        kalori_terbakar: Number(formOlahraga.kalori)
+      }, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
 
       setShowOlahragaModal(false);
       setFormOlahraga({ jenis: '', durasi: '', kalori: '' });
       fetchDashboardData();
-    } catch (error) { alert("Gagal mencatat olahraga."); }
+    } catch (error) { 
+      const pesanError = error.response?.data?.pesan || "Gagal mencatat olahraga.";
+      alert(pesanError); 
+    }
   };
 
   const submitCatatanHarian = async () => {
@@ -100,8 +122,12 @@ export default function Dashboard() {
       const hariIni = new Date().toISOString().split('T')[0];
       
       await axios.post('http://localhost:3000/api/log/catatan', {
-        tanggal: hariIni, durasi_tidur_jam: Number(formCatatan.tidur), total_minum_gelas: Number(formCatatan.air)
-      }, { headers: { Authorization: `Bearer ${token}` } });
+        tanggal: hariIni, 
+        durasi_tidur_jam: Number(formCatatan.tidur), 
+        total_minum_gelas: Number(formCatatan.air)
+      }, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
       
       alert("Catatan harian berhasil disimpan!");
       fetchDashboardData();
@@ -115,8 +141,9 @@ export default function Dashboard() {
   const targetKeluar = 500;
   const kaloriMasuk = logHarian?.total_kalori_masuk || 0;
   const kaloriKeluar = logHarian?.total_kalori_keluar || 0;
-  const persenMasuk = Math.min(Math.round((kaloriMasuk / targetMasuk) * 100), 100);
-  const persenKeluar = Math.min(Math.round((kaloriKeluar / targetKeluar) * 100), 100);
+  
+  const persenMasuk = Math.min(Math.round((kaloriMasuk / targetMasuk) * 100) || 0, 100);
+  const persenKeluar = Math.min(Math.round((kaloriKeluar / targetKeluar) * 100) || 0, 100);
 
   return (
     <div className="flex min-h-screen bg-[#f4f7f6] font-sans relative">
@@ -181,7 +208,7 @@ export default function Dashboard() {
         {/* Daftar Makanan & Olahraga */}
         <div className="grid grid-cols-2 gap-6 mb-8">
           {/* Box Makanan */}
-          <div className="bg-white p-6 rounded-3xl border gray-200 shadow-sm flex flex-col h-80">
+          <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm flex flex-col h-80">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-extrabold text-gray-800 text-lg">Histori Makanan</h3>
               <button onClick={() => setShowMakananModal(true)} className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-xl font-bold hover:bg-green-600 hover:shadow-lg hover:-translate-y-0.5 transition-all">
@@ -197,7 +224,7 @@ export default function Dashboard() {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-gray-800">{item.nama_makanan}</p>
-                      <p className="text-xs text-green-600 font-bold mt-0.5">{item.kalori} kkal</p>
+                      <p className="text-xs text-green-600 font-bold mt-0.5">{item.waktu} • {item.kalori} kkal</p>
                     </div>
                   </div>
                 </div>
@@ -206,7 +233,7 @@ export default function Dashboard() {
           </div>
 
           {/* Box Olahraga */}
-          <div className="bg-white p-6 rounded-3xl border gray-200 shadow-sm flex flex-col h-80">
+          <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm flex flex-col h-80">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-extrabold text-gray-800 text-lg">Histori Olahraga</h3>
               <button onClick={() => setShowOlahragaModal(true)} className="flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-xl font-bold hover:bg-orange-600 hover:shadow-lg hover:-translate-y-0.5 transition-all">
@@ -243,7 +270,7 @@ export default function Dashboard() {
                  <div className="flex items-center gap-2">
                    <input 
                       type="number" step="0.1"
-                      className="w-full text-xl font-black text-gray-800 bg-gray-50 border gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none p-1.5 text-center transition-all"
+                      className="w-full text-xl font-black text-gray-800 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none p-1.5 text-center transition-all"
                       value={formCatatan.tidur} onChange={(e) => setFormCatatan({...formCatatan, tidur: e.target.value})} placeholder="0"
                    />
                    <span className="text-sm font-semibold text-gray-500">jam</span>
@@ -259,7 +286,7 @@ export default function Dashboard() {
                  <div className="flex items-center gap-2">
                    <input 
                       type="number"
-                      className="w-full text-xl font-black text-gray-800 bg-gray-50 border gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none p-1.5 text-center transition-all"
+                      className="w-full text-xl font-black text-gray-800 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none p-1.5 text-center transition-all"
                       value={formCatatan.air} onChange={(e) => setFormCatatan({...formCatatan, air: e.target.value})} placeholder="0"
                    />
                    <span className="text-sm font-semibold text-gray-500">gelas</span>
@@ -290,17 +317,34 @@ export default function Dashboard() {
               <p className="text-sm text-gray-500 font-medium">Catat asupan kalorimu hari ini</p>
             </div>
             <form onSubmit={submitMakanan} className="space-y-4">
+              
+              {/* PERBAIKAN: Fitur Dropdown Waktu Makan */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5 ml-1">Waktu Makan</label>
+                <select 
+                  className="w-full p-3.5 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-0 outline-none text-sm text-gray-800 focus:bg-white transition-all font-medium appearance-none"
+                  value={formMakanan.waktu} 
+                  onChange={(e) => setFormMakanan({...formMakanan, waktu: e.target.value})} 
+                  required
+                >
+                  <option value="Sarapan">Sarapan</option>
+                  <option value="Makan Siang">Makan Siang</option>
+                  <option value="Makan Malam">Makan Malam</option>
+                  <option value="Camilan">Camilan</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1.5 ml-1">Nama Makanan</label>
                 <input 
-                  type="text" className="w-full p-3.5 border-2 gray-200 rounded-xl focus:border-green-500 focus:ring-0 outline-none text-sm gray-50 focus:bg-white transition-all font-medium"
+                  type="text" className="w-full p-3.5 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-0 outline-none text-sm text-gray-800 focus:bg-white transition-all font-medium"
                   placeholder="Contoh: Nasi Padang" value={formMakanan.nama} onChange={(e) => setFormMakanan({...formMakanan, nama: e.target.value})} required
                 />
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1.5 ml-1">Jumlah Kalori (kkal)</label>
                 <input 
-                  type="number" className="w-full p-3.5 border-2 gray-200 rounded-xl focus:border-green-500 focus:ring-0 outline-none text-sm gray-50 focus:bg-white transition-all font-medium"
+                  type="number" className="w-full p-3.5 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-0 outline-none text-sm text-gray-800 focus:bg-white transition-all font-medium"
                   placeholder="Contoh: 450" value={formMakanan.kalori} onChange={(e) => setFormMakanan({...formMakanan, kalori: e.target.value})} required
                 />
               </div>
@@ -326,7 +370,7 @@ export default function Dashboard() {
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1.5 ml-1">Jenis Olahraga</label>
                 <input 
-                  type="text" className="w-full p-3.5 border-2 gray-200 rounded-xl focus:border-orange-500 focus:ring-0 outline-none text-sm gray-50 focus:bg-white transition-all font-medium"
+                  type="text" className="w-full p-3.5 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-0 outline-none text-sm text-gray-800 focus:bg-white transition-all font-medium"
                   placeholder="Contoh: Lari Pagi" value={formOlahraga.jenis} onChange={(e) => setFormOlahraga({...formOlahraga, jenis: e.target.value})} required
                 />
               </div>
@@ -334,14 +378,14 @@ export default function Dashboard() {
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1.5 ml-1">Durasi (menit)</label>
                   <input 
-                    type="number" className="w-full p-3.5 border-2 gray-200 rounded-xl focus:border-orange-500 focus:ring-0 outline-none text-sm gray-50 focus:bg-white transition-all font-medium"
+                    type="number" className="w-full p-3.5 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-0 outline-none text-sm text-gray-800 focus:bg-white transition-all font-medium"
                     placeholder="Contoh: 45" value={formOlahraga.durasi} onChange={(e) => setFormOlahraga({...formOlahraga, durasi: e.target.value})} required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1.5 ml-1">Kalori (kkal)</label>
                   <input 
-                    type="number" className="w-full p-3.5 border-2 gray-200 rounded-xl focus:border-orange-500 focus:ring-0 outline-none text-sm gray-50 focus:bg-white transition-all font-medium"
+                    type="number" className="w-full p-3.5 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:ring-0 outline-none text-sm text-gray-800 focus:bg-white transition-all font-medium"
                     placeholder="Contoh: 300" value={formOlahraga.kalori} onChange={(e) => setFormOlahraga({...formOlahraga, kalori: e.target.value})} required
                   />
                 </div>
